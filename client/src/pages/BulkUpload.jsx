@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/layout/Sidebar.jsx';
 import api from '../api/axios.js';
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
+const BASE_URL = (import.meta.env.VITE_BASE_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
 
 // ─── CSV / text parsers ────────────────────────────────────────────────────
 

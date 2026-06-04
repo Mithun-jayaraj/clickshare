@@ -13,7 +13,7 @@ import DeviceBreakdown from '../components/charts/DeviceBreakdown.jsx';
 import { formatDate, formatRelativeTime } from '../utils/validators.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
+const BASE_URL = (import.meta.env.VITE_BASE_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
 
 // ── KPI Card ─────────────────────────────────────────────────
 const KPICard = ({ icon: Icon, label, value, colorBg, colorText, delay = 0 }) => (

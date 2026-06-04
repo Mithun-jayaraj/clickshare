@@ -27,7 +27,7 @@ import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { copyToClipboard, truncateUrl, formatRelativeTime } from '../utils/validators.js';
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
+const BASE_URL = (import.meta.env.VITE_BASE_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
 
 // Animated counter
 const Counter = ({ value }) => {

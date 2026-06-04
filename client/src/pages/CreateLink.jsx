@@ -11,7 +11,7 @@ import useUrls from '../hooks/useUrls.js';
 import { isValidUrl, isValidAlias, copyToClipboard } from '../utils/validators.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
+const BASE_URL = (import.meta.env.VITE_BASE_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
 
 // ── Confetti ──────────────────────────────────────────────────
 const Confetti = () => {
