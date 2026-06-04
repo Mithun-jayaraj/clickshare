@@ -64,6 +64,7 @@ app.use(cors({
     const allowed =
       allowedOrigins.includes(normalized) ||
       normalized.endsWith('.vercel.app') ||
+      normalized.endsWith('.onrender.com') ||
       /^http:\/\/localhost(:\d+)?$/.test(normalized);
 
     if (allowed) {
@@ -96,6 +97,15 @@ const authLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
+
+// ─── Path Normalization Middleware ───────────────────────────
+// Normalizes multiple leading slashes in URL path (e.g. //mofcvr -> /mofcvr)
+app.use((req, res, next) => {
+  if (req.url.startsWith('//')) {
+    req.url = req.url.replace(/^\/+/, '/');
+  }
+  next();
+});
 
 // ─── Body Parsers ─────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));

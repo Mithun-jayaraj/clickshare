@@ -9,7 +9,7 @@
 ## 📽️ Application Demonstration & Video Walkthrough
 
 ### 🔗 Video Links
-*   [Watch the Loom Video Walkthrough (Placeholder)](https://www.loom.com/share/clicksphere-production-demonstration)
+*   [Watch the Loom Video Walkthrough](https://www.loom.com/share/247191da16a542abb0cfd0ad49c43c95)
 *   [Watch the YouTube Explanation & Demo (Placeholder)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
 
 ### 🚀 Verified Signup and Dashboard Flow (Local Demonstration)

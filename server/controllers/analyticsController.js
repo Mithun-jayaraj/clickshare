@@ -1,6 +1,10 @@
 import Url from '../models/Url.js';
 import Visit from '../models/Visit.js';
 
+const getCleanBaseUrl = () => {
+  return (process.env.BASE_URL || '').trim().replace(/\/+$/, '');
+};
+
 /**
  * GET /api/analytics/:urlId
  * Get detailed click analytics for a specific URL
@@ -75,7 +79,7 @@ export const getUrlAnalytics = async (req, res, next) => {
     res.status(200).json({
       success: true,
       analytics: {
-        url: { ...url.toObject(), shortUrl: `${process.env.BASE_URL}/${url.shortCode}` },
+        url: { ...url.toObject(), shortUrl: `${getCleanBaseUrl()}/${url.shortCode}` },
         totalClicks: url.clickCount,
         clicksToday,
         clicksThisWeek,
@@ -152,7 +156,7 @@ export const getOverview = async (req, res, next) => {
         shortCode: u.shortCode,
         originalUrl: u.originalUrl,
         clickCount: u.clickCount,
-        shortUrl: `${process.env.BASE_URL}/${u.shortCode}`,
+        shortUrl: `${getCleanBaseUrl()}/${u.shortCode}`,
       }));
 
     res.status(200).json({

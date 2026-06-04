@@ -2,6 +2,10 @@ import Url from '../models/Url.js';
 import Visit from '../models/Visit.js';
 import { generateShortCode, detectDevice, detectBrowser } from '../utils/generateCode.js';
 
+const getCleanBaseUrl = () => {
+  return (process.env.BASE_URL || '').trim().replace(/\/+$/, '');
+};
+
 /**
  * GET /api/urls
  */
@@ -64,7 +68,7 @@ export const createUrl = async (req, res, next) => {
       message: 'Short URL created successfully.',
       url: {
         ...url.toObject(),
-        shortUrl: `${process.env.BASE_URL}/${url.shortCode}`,
+        shortUrl: `${getCleanBaseUrl()}/${url.shortCode}`,
       },
     });
   } catch (error) {
@@ -111,7 +115,7 @@ export const updateUrl = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'URL updated successfully.',
-      url: { ...url.toObject(), shortUrl: `${process.env.BASE_URL}/${url.shortCode}` },
+      url: { ...url.toObject(), shortUrl: `${getCleanBaseUrl()}/${url.shortCode}` },
     });
   } catch (error) {
     next(error);
@@ -264,7 +268,7 @@ export const bulkCreateUrls = async (req, res, next) => {
           customAlias,
           success: true,
           shortCode: created.shortCode,
-          shortUrl: `${process.env.BASE_URL}/${created.shortCode}`,
+          shortUrl: `${getCleanBaseUrl()}/${created.shortCode}`,
         });
       } catch (err) {
         results.push({ originalUrl, customAlias, success: false, message: err.message || 'Database error.' });
