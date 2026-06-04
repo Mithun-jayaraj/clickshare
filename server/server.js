@@ -8,57 +8,69 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import urlRoutes from './routes/urlRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
-import workspaceRoutes from './routes/workspaceRoutes.js';
 import { redirectUrl } from './controllers/urlController.js';
 import errorHandler from './middleware/errorHandler.js';
 
-// Startup environment validation
+// ─── Startup Environment Validation ──────────────────────────
 const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
 REQUIRED_ENV.forEach((key) => {
   if (!process.env[key]) {
-    console.error(`❌ Critical Error: Environment variable '${key}' is missing!`);
+    console.error(`❌ FATAL: Missing required environment variable: ${key}`);
     process.exit(1);
   }
 });
 
-// Connect to MongoDB
+// ─── Connect to MongoDB ───────────────────────────────────────
 connectDB();
 
 const app = express();
 
-// Trust proxy for Render/Vercel (important for express-rate-limit)
+// ─── Trust proxy (REQUIRED for Render / any reverse proxy) ───
+// Without this, express-rate-limit uses the proxy's IP, rate-limiting everyone globally.
 app.set('trust proxy', 1);
 
-// Security middlewares
+// ─── Security Middlewares ─────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// Setup allowed CORS origins
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
-if (process.env.CLIENT_URL) {
-  const urls = process.env.CLIENT_URL.split(',').map(url => url.trim().replace(/\/$/, ''));
-  allowedOrigins.push(...urls);
-}
+// ─── CORS Configuration ───────────────────────────────────────
+// Supports: localhost, any *.vercel.app preview, and the CLIENT_URL env var
+// CLIENT_URL can be a comma-separated list of allowed origins
+const buildAllowedOrigins = () => {
+  const origins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:4173', // vite preview
+  ];
+  if (process.env.CLIENT_URL) {
+    process.env.CLIENT_URL
+      .split(',')
+      .map((u) => u.trim().replace(/\/$/, ''))
+      .filter(Boolean)
+      .forEach((u) => origins.push(u));
+  }
+  return origins;
+};
+
+const allowedOrigins = buildAllowedOrigins();
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    // Allow non-browser requests (Postman, curl, mobile apps)
     if (!origin) return callback(null, true);
 
-    const normalizedOrigin = origin.replace(/\/$/, '');
-    const isAllowed = allowedOrigins.includes(normalizedOrigin) || 
-                      normalizedOrigin.endsWith('.vercel.app') || 
-                      /^http:\/\/localhost(:\d+)?$/.test(normalizedOrigin);
+    const normalized = origin.replace(/\/$/, '');
+    const allowed =
+      allowedOrigins.includes(normalized) ||
+      normalized.endsWith('.vercel.app') ||
+      /^http:\/\/localhost(:\d+)?$/.test(normalized);
 
-    if (isAllowed) {
+    if (allowed) {
       callback(null, true);
     } else {
-      console.warn(`[CORS Blocked] Request from origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(new Error(`CORS: Origin "${origin}" is not allowed`));
     }
   },
   credentials: true,
@@ -66,61 +78,71 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  message: { success: false, message: 'Too many requests. Please try again later.' },
+// ─── Rate Limiting ────────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  message: { success: false, message: 'Too many requests. Please try again later.' },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { success: false, message: 'Too many auth attempts. Please try again later.' },
 });
 
-app.use(limiter);
+app.use(globalLimiter);
 
-// Body parsers
+// ─── Body Parsers ─────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Root route (friendly health check and welcome)
+// ─── Root Route (fixes "Cannot GET /" on Render) ─────────────
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Welcome to the ClickSphere API. Everything is running smoothly!',
-    status: 'healthy',
-    timestamp: new Date()
+    message: 'ClickSphere API is running ✅',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Health check
+// ─── Health Check ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.status(200).json({ success: true, message: 'ClickSphere API is running.', timestamp: new Date() });
+  res.status(200).json({
+    success: true,
+    message: 'ClickSphere API is healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// API routes
+// ─── API Routes ───────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/urls', urlRoutes);
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api/workspaces', workspaceRoutes);
 
-// Public short URL redirect (must come last before error handler)
+// ─── Short URL Redirect (must be AFTER /api routes) ──────────
+// This catches /:shortCode — put it last so it doesn't shadow API paths
 app.get('/:shortCode', redirectUrl);
 
-// 404 for unknown API routes
+// ─── 404 Handler for Unknown API Routes ──────────────────────
 app.use('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
 
-// Global error handler
+// ─── Global Error Handler ─────────────────────────────────────
 app.use(errorHandler);
 
+// ─── Start Server ─────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 ClickSphere server running on http://localhost:${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 ClickSphere server running on port ${PORT}`);
+  console.log(`   Environment : ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   CORS origins: ${allowedOrigins.join(', ')} + *.vercel.app`);
 });

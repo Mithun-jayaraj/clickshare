@@ -1,19 +1,23 @@
 import axios from 'axios';
 
-// Sanitize base URL: remove trailing slashes and ensure it ends with '/api'
-let rawBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-let cleanBaseUrl = rawBaseUrl.trim().replace(/\/$/, '');
-if (!cleanBaseUrl.endsWith('/api')) {
-  cleanBaseUrl += '/api';
-}
+/**
+ * Normalize the base URL:
+ *  - Strip trailing slashes
+ *  - Append /api if missing
+ * This makes the app resilient to env-var mistakes (missing /api, extra slash, etc.)
+ */
+const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const cleanBase = raw.trim().replace(/\/+$/, '');
+const BASE_URL = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
 
 const api = axios.create({
-  baseURL: cleanBaseUrl,
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 20000,
+  withCredentials: false, // we use Bearer token, not cookies
 });
 
-// Request interceptor — attach JWT
+// ─── Request interceptor: attach JWT ─────────────────────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('clicksphere_token');
@@ -25,14 +29,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor — handle 401
+// ─── Response interceptor: handle 401 ────────────────────────
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('clicksphere_token');
-      // Redirect to login if not already there
-      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/signup')) {
+      if (
+        !window.location.pathname.includes('/login') &&
+        !window.location.pathname.includes('/signup')
+      ) {
         window.location.href = '/login';
       }
     }

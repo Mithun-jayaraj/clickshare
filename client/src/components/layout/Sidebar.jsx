@@ -9,7 +9,7 @@ import {
   Settings,
   LogOut,
   Plus,
-  Users,
+  Upload,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -17,12 +17,12 @@ import useAuth from '../../hooks/useAuth.js';
 import { useTheme } from '../../context/ThemeContext.jsx';
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-  { label: 'My Links', icon: Link2, href: '/dashboard/links' },
-  { label: 'Analytics', icon: BarChart2, href: '/dashboard/analytics' },
-  { label: 'Team Workspace', icon: Users, href: '/dashboard/workspace' },
-  { label: 'Profile', icon: User, href: '/dashboard/profile' },
-  { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
+  { label: 'Dashboard',   icon: LayoutDashboard, href: '/dashboard' },
+  { label: 'My Links',    icon: Link2,            href: '/dashboard/links' },
+  { label: 'Bulk Upload', icon: Upload,           href: '/dashboard/bulk' },
+  { label: 'Analytics',   icon: BarChart2,        href: '/dashboard/analytics' },
+  { label: 'Profile',     icon: User,             href: '/dashboard/profile' },
+  { label: 'Settings',    icon: Settings,         href: '/dashboard/settings' },
 ];
 
 const Sidebar = () => {
@@ -77,11 +77,7 @@ const Sidebar = () => {
             <Link key={item.href} to={item.href}>
               <motion.div
                 whileHover={{ x: 2 }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 relative ${
-                  active
-                    ? 'text-indigo-500'
-                    : 'hover:text-slate-900'
-                }`}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 relative"
                 style={{
                   backgroundColor: active ? (isDark ? 'rgba(99,102,241,0.15)' : '#eef2ff') : 'transparent',
                   color: active ? 'var(--primary)' : 'var(--text-secondary)',
@@ -109,10 +105,7 @@ const Sidebar = () => {
           onClick={toggleTheme}
           id="btn-toggle-theme"
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors text-sm font-medium"
-          style={{
-            color: 'var(--text-secondary)',
-            backgroundColor: 'transparent',
-          }}
+          style={{ color: 'var(--text-secondary)', backgroundColor: 'transparent' }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : '#f8fafc')}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
         >

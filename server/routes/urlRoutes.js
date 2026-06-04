@@ -8,7 +8,7 @@ router.use(protect);
 
 router.get('/', getUrls);
 router.post('/', createUrl);
-router.post('/bulk', bulkCreateUrls);
+router.post('/bulk', bulkCreateUrls);   // ← MUST be before /:id routes
 router.delete('/:id', deleteUrl);
 router.patch('/:id', updateUrl);
 
