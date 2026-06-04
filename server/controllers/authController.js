@@ -43,12 +43,7 @@ export const register = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    });
+    next(error);
   }
 };
 
@@ -83,12 +78,7 @@ export const login = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    });
+    next(error);
   }
 };
 
@@ -108,12 +98,7 @@ export const getMe = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    });
+    next(error);
   }
 };
 
@@ -140,12 +125,7 @@ export const updateProfile = async (req, res, next) => {
       user: { id: user._id, name: user.name, email: user.email, createdAt: user.createdAt },
     });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    });
+    next(error);
   }
 };
 
@@ -177,12 +157,7 @@ export const changePassword = async (req, res, next) => {
 
     res.status(200).json({ success: true, message: 'Password changed successfully.' });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    });
+    next(error);
   }
 };
 
@@ -195,11 +170,6 @@ export const deleteAccount = async (req, res, next) => {
     await User.findByIdAndDelete(req.user._id);
     res.status(200).json({ success: true, message: 'Account deleted successfully.' });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    });
+    next(error);
   }
 };
