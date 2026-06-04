@@ -186,3 +186,171 @@ export const redirectUrl = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/urls/bulk
+ * Bulk create short URLs
+ */
+export const bulkCreateUrls = async (req, res, next) => {
+  try {
+    const { urls } = req.body;
+
+    if (!urls || !Array.isArray(urls)) {
+      return res.status(400).json({ success: false, message: 'An array of URLs is required.' });
+    }
+
+    if (urls.length === 0) {
+      return res.status(400).json({ success: false, message: 'URL array cannot be empty.' });
+    }
+
+    if (urls.length > 100) {
+      return res.status(400).json({ success: false, message: 'Bulk upload is limited to 100 URLs per request.' });
+    }
+
+    const results = [];
+
+    for (const item of urls) {
+      const { originalUrl, customAlias, expiresAt } = item;
+
+      // 1. Validate original URL presence
+      if (!originalUrl) {
+        results.push({
+          originalUrl: originalUrl || '',
+          success: false,
+          message: 'Destination URL is required.',
+        });
+        continue;
+      }
+
+      // 2. Validate URL format
+      try {
+        new URL(originalUrl);
+      } catch {
+        results.push({
+          originalUrl,
+          success: false,
+          message: 'Invalid URL format (must include http:// or https://).',
+        });
+        continue;
+      }
+
+      // 3. Handle custom alias or code generation
+      let shortCode;
+      let errorOccurred = false;
+
+      if (customAlias) {
+        const trimmedAlias = customAlias.trim().toLowerCase();
+        // Validate custom alias format
+        if (!/^[a-zA-Z0-9_-]+$/.test(trimmedAlias)) {
+          results.push({
+            originalUrl,
+            customAlias,
+            success: false,
+            message: 'Alias can only contain letters, numbers, hyphens, and underscores.',
+          });
+          continue;
+        }
+        if (trimmedAlias.length < 3 || trimmedAlias.length > 30) {
+          results.push({
+            originalUrl,
+            customAlias,
+            success: false,
+            message: 'Alias must be 3–30 characters.',
+          });
+          continue;
+        }
+
+        // Check if alias is already taken (in db + in this batch)
+        const existing = await Url.findOne({ shortCode: trimmedAlias });
+        const duplicateInBatch = results.some(r => r.success && r.shortCode === trimmedAlias);
+
+        if (existing || duplicateInBatch) {
+          results.push({
+            originalUrl,
+            customAlias,
+            success: false,
+            message: 'This custom alias is already taken.',
+          });
+          continue;
+        }
+        shortCode = trimmedAlias;
+      } else {
+        // Generate unique short code
+        let attempts = 0;
+        let isUnique = false;
+        do {
+          shortCode = generateShortCode();
+          attempts++;
+          const existing = await Url.findOne({ shortCode });
+          const duplicateInBatch = results.some(r => r.success && r.shortCode === shortCode);
+          if (!existing && !duplicateInBatch) {
+            isUnique = true;
+          }
+          if (attempts > 10) {
+            results.push({
+              originalUrl,
+              success: false,
+              message: 'Could not generate unique short code. Please try again.',
+            });
+            errorOccurred = true;
+            break;
+          }
+        } while (!isUnique);
+
+        if (errorOccurred) continue;
+      }
+
+      // 4. Validate expiry date if present
+      let parsedExpiry = null;
+      if (expiresAt) {
+        const expiryDate = new Date(expiresAt);
+        if (isNaN(expiryDate.getTime()) || expiryDate <= new Date()) {
+          results.push({
+            originalUrl,
+            customAlias,
+            success: false,
+            message: 'Expiry date must be a valid future date.',
+          });
+          continue;
+        }
+        parsedExpiry = expiryDate;
+      }
+
+      // 5. Create URL
+      try {
+        const url = await Url.create({
+          userId: req.user._id,
+          originalUrl,
+          shortCode,
+          customAlias: customAlias ? customAlias.trim().toLowerCase() : null,
+          expiresAt: parsedExpiry,
+        });
+
+        results.push({
+          originalUrl,
+          customAlias,
+          success: true,
+          shortCode: url.shortCode,
+          shortUrl: `${process.env.BASE_URL}/${url.shortCode}`,
+        });
+      } catch (err) {
+        results.push({
+          originalUrl,
+          customAlias,
+          success: false,
+          message: err.message || 'Database error during URL creation.',
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      succeeded: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
